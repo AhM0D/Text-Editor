@@ -6,38 +6,30 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.view.KeyEvent
 import android.view.LayoutInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.accessibility.AccessibilityEvent
 import android.view.animation.Animation
 import android.view.animation.AnimationUtils
-import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.PopupMenu
+import android.widget.*
 import android.widget.PopupMenu.OnMenuItemClickListener
-import android.widget.Toast
-import android.widget.ToggleButton
 import androidx.appcompat.app.AlertDialog
 import androidx.core.content.ContextCompat
 import androidx.core.text.TextUtilsCompat
 import androidx.core.view.ViewCompat
-import org.wordpress.android.util.AppLog
 import org.wordpress.aztec.AztecText
 import org.wordpress.aztec.AztecText.EditorHasChanges.NO_CHANGES
 import org.wordpress.aztec.AztecTextFormat
 import org.wordpress.aztec.ITextFormat
 import org.wordpress.aztec.R
+import org.wordpress.aztec.formatting.LinkFormatter
 import org.wordpress.aztec.plugins.IMediaToolbarButton
 import org.wordpress.aztec.plugins.IToolbarButton
 import org.wordpress.aztec.source.SourceViewEditText
 import org.wordpress.aztec.util.convertToButtonAccessibilityProperties
 import org.wordpress.aztec.util.setBackgroundDrawableRes
-import java.util.ArrayList
-import java.util.Arrays
-import java.util.Locale
+import java.util.*
 
 /**
  * Aztec toolbar container.
@@ -47,6 +39,7 @@ import java.util.Locale
 class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
     val RETAINED_EDITOR_HTML_PARSED_SHA256_KEY = "RETAINED_EDITOR_HTML_PARSED_SHA256_KEY"
     val RETAINED_SOURCE_HTML_PARSED_SHA256_KEY = "RETAINED_SOURCE_HTML_PARSED_SHA256_KEY"
+
 
     private var aztecToolbarListener: IAztecToolbarClickListener? = null
     private var editor: AztecText? = null
@@ -67,7 +60,7 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
     var editorContentParsedSHA256LastSwitch: ByteArray = ByteArray(0)
     var sourceContentParsedSHA256LastSwitch: ByteArray = ByteArray(0)
 
-    private lateinit var toolbarScrolView: HorizontalScrollView
+    private var toolbarScrolView: HorizontalScrollView ?= null
     private lateinit var buttonEllipsisCollapsed: RippleToggleButton
     private lateinit var buttonEllipsisExpanded: RippleToggleButton
     private lateinit var layoutExpandedTranslateInEnd: Animation
@@ -199,13 +192,13 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
         isMediaToolbarVisible = restoredState.getBoolean("isMediaToolbarVisible")
         setAdvancedState()
         setupMediaToolbar()
-        editorContentParsedSHA256LastSwitch = restoredState.getByteArray(RETAINED_EDITOR_HTML_PARSED_SHA256_KEY)
-        sourceContentParsedSHA256LastSwitch = restoredState.getByteArray(RETAINED_SOURCE_HTML_PARSED_SHA256_KEY)
+        editorContentParsedSHA256LastSwitch = restoredState.getByteArray(RETAINED_EDITOR_HTML_PARSED_SHA256_KEY)!!
+        sourceContentParsedSHA256LastSwitch = restoredState.getByteArray(RETAINED_SOURCE_HTML_PARSED_SHA256_KEY)!!
     }
 
     override fun onSaveInstanceState(): Parcelable {
         val superState = super.onSaveInstanceState()
-        val savedState = SourceViewEditText.SavedState(superState)
+        val savedState = SourceViewEditText.SavedState(superState!!)
         val bundle = Bundle()
         bundle.putBoolean("isSourceVisible", sourceEditor?.visibility == View.VISIBLE)
         bundle.putBoolean("isMediaMode", isMediaModeEnabled)
@@ -498,7 +491,6 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
             }
             ToolbarAction.LINK -> {
                 aztecToolbarListener?.onToolbarFormatButtonClicked(AztecTextFormat.FORMAT_LINK, false)
-                editor!!.showLinkDialog()
             }
             ToolbarAction.HTML -> {
                 aztecToolbarListener?.onToolbarHtmlButtonClicked()
@@ -735,7 +727,7 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
                         layoutExpanded.visibility = View.VISIBLE
                         //in rtl mode the scrollview will scroll to "end" when layoutExpanded becomes visible
                         //keep hard focus on media button to avoid it
-                        toolbarScrolView.requestChildFocus(buttonMediaCollapsed, buttonMediaCollapsed)
+                        toolbarScrolView?.requestChildFocus(buttonMediaCollapsed, buttonMediaCollapsed)
                         layoutExpanded.startAnimation(layoutExpandedTranslateInEnd)
                     }
                 }
@@ -746,9 +738,9 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
     fun scrollToBeginingOfToolbar() {
         if (TextUtilsCompat.getLayoutDirectionFromLocale(Locale.getDefault()) == ViewCompat.LAYOUT_DIRECTION_LTR
                 || Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.JELLY_BEAN_MR2) {
-            toolbarScrolView.fullScroll(View.FOCUS_LEFT)
+            toolbarScrolView?.fullScroll(View.FOCUS_LEFT)
         } else {
-            toolbarScrolView.fullScroll(View.FOCUS_RIGHT)
+            toolbarScrolView?.fullScroll(View.FOCUS_RIGHT)
         }
     }
 
@@ -817,7 +809,7 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
                         stylingToolbar.visibility = View.VISIBLE
                         //in rtl mode the scrollview will scroll to "end" when stylingToolbar becomes visible
                         //keep hard focus on media button to avoid it
-                        toolbarScrolView.requestChildFocus(buttonMediaCollapsed, buttonMediaCollapsed)
+                        toolbarScrolView?.requestChildFocus(buttonMediaCollapsed, buttonMediaCollapsed)
                     }
                 }
         )
@@ -1022,4 +1014,19 @@ class AztecToolbar : FrameLayout, IAztecToolbar, OnMenuItemClickListener {
         }
     }
 
+    fun createLink(linkText: String, anchorText: String, openInNewWindowCheckbox: Boolean = true) {
+        editor?.link(linkText, anchorText, openInNewWindowCheckbox)
+    }
+
+    fun removeLink() {
+       editor?.removeLink()
+    }
+
+    fun getSelectedUrlWithAnchor(): Triple<String, String, Boolean> {
+        return editor?.linkFormatter!!.getSelectedUrlWithAnchor()
+    }
+
+    fun getLinkFormatter(): LinkFormatter {
+        return editor?.linkFormatter!!
+    }
 }

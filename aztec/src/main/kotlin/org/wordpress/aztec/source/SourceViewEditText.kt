@@ -98,7 +98,7 @@ open class SourceViewEditText : AppCompatEditText, TextWatcher {
         visibility = customState.getInt("visibility")
         val retainedContent = InstanceStateUtils.readAndPurgeTempInstance<String>(RETAINED_CONTENT_KEY, "", savedState.state)
         setText(retainedContent)
-        initialEditorContentParsedSHA256 = customState.getByteArray(AztecText.RETAINED_INITIAL_HTML_PARSED_SHA256_KEY)
+        initialEditorContentParsedSHA256 = customState.getByteArray(AztecText.RETAINED_INITIAL_HTML_PARSED_SHA256_KEY)!!
     }
 
     // Do not include the content of the editor when saving state to bundle.
@@ -115,7 +115,7 @@ open class SourceViewEditText : AppCompatEditText, TextWatcher {
                 initialEditorContentParsedSHA256)
         InstanceStateUtils.writeTempInstance(context, null, RETAINED_CONTENT_KEY, text.toString(), bundle)
         val superState = super.onSaveInstanceState()
-        val savedState = SavedState(superState)
+        val savedState = SavedState(superState!!)
         bundle.putInt("visibility", visibility)
         savedState.state = bundle
         return savedState
@@ -127,7 +127,7 @@ open class SourceViewEditText : AppCompatEditText, TextWatcher {
         constructor(superState: Parcelable) : super(superState)
 
         constructor(parcel: Parcel) : super(parcel) {
-            state = parcel.readBundle(javaClass.classLoader)
+            state = parcel.readBundle(javaClass.classLoader)!!
         }
 
         override fun writeToParcel(out: Parcel, flags: Int) {

@@ -34,7 +34,7 @@ class History(val historyEnabled: Boolean, val historySize: Int) {
 
     fun beforeTextChanged(editText: EditText) {
         if (historyEnabled && !historyWorking) {
-            mainHandler.removeCallbacks(historyRunnable)
+            historyRunnable?.let { mainHandler.removeCallbacks(it) }
             if (!textChangedPending) {
                 textChangedPending = true
                 historyRunnable?.text =
@@ -45,7 +45,9 @@ class History(val historyEnabled: Boolean, val historySize: Int) {
                     }
                 historyRunnable?.editText = editText
             }
-            mainHandler.postDelayed(historyRunnable, historyThrottleTime)
+            if (historyRunnable != null) {
+                mainHandler.postDelayed(historyRunnable, historyThrottleTime)
+            }
         }
     }
 
